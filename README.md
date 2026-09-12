@@ -1,4 +1,4 @@
-# brain rotter
+# RabbitHole
 
 Type two famous names. Two research agents dig outward from one name each — feuds, exes,
 diss tracks, unfollows, lawsuits, whatever the internet is saying — writing everything they

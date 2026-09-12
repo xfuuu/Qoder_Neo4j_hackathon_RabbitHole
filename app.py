@@ -756,7 +756,7 @@ def render_header():
     st.markdown(
         """
         <div class="header-bar">
-            <div class="header-title">brain&nbsp;rotter</div>
+            <div class="header-title">RabbitHole</div>
             <div class="live-badge">● LIVE</div>
         </div>
         """,
@@ -936,7 +936,7 @@ def live_graph(driver):
 
 def main():
     st.set_page_config(
-        page_title="brain rotter", layout="wide"
+        page_title="RabbitHole", layout="wide"
     )
     render_header()
 
