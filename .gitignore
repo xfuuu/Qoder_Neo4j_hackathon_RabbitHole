@@ -2,10 +2,16 @@
 .env
 
 # Python
-__pycache__/
-*.pyc
-venv/
 .venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Run artifacts — one directory per bridge run, with the pages its explorers read
+search/
+
+# Rendered for this checkout's absolute path — see scripts/render.sh
+.mcp.json
 
 # OS
 .DS_Store

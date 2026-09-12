@@ -1,5 +1,8 @@
-streamlit
-neo4j
-pyvis
-python-dotenv
-streamlit-autorefresh
+mcp>=2.0.0
+httpx>=0.28
+pydantic>=2.0
+neo4j>=5.20
+streamlit>=1.38
+pyvis>=0.3.2
+python-dotenv>=1.0
+streamlit-autorefresh>=1.0

@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "websearch": {
+      "command": "@@ROOT@@/.venv/bin/python",
+      "args": ["-m", "mcp_servers.websearch_server", "--profile", "director"],
+      "env": { "PYTHONPATH": "@@ROOT@@/servers" }
+    },
+    "graph": {
+      "command": "@@ROOT@@/.venv/bin/python",
+      "args": ["-m", "mcp_servers.graph_server"],
+      "env": { "PYTHONPATH": "@@ROOT@@/servers" }
+    },
+    "explorer": {
+      "command": "@@ROOT@@/.venv/bin/python",
+      "args": ["-m", "mcp_servers.websearch_server", "--profile", "explorer"],
+      "env": { "PYTHONPATH": "@@ROOT@@/servers" }
+    },
+    "x": {
+      "command": "node",
+      "args": ["@@X_ROOT@@/dist/mcp.js", "--profile", "director"],
+      "env": { "AUTH_DIR": "@@X_ROOT@@/.auth" }
+    }
+  }
+}

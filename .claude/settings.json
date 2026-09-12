@@ -1,0 +1,34 @@
+{
+  "env": {
+    "MAX_MCP_OUTPUT_TOKENS": "50000"
+  },
+  "enableAllProjectMcpServers": true,
+  "permissions": {
+    "allow": [
+      "mcp__websearch",
+      "mcp__graph",
+      "mcp__explorer",
+      "mcp__x",
+      "Agent(frontier-researcher)",
+      "Agent(page-explorer)",
+      "Agent(pdf-reader)"
+    ],
+    "deny": [
+      "WebFetch",
+      "mcp__x__tweet",
+      "mcp__x__thread",
+      "mcp__x__reply_to_post",
+      "mcp__x__reply_to_comment_by_id",
+      "mcp__x__replace_comment_by_id",
+      "mcp__x__quote_tweet",
+      "mcp__x__like_post",
+      "mcp__x__unlike_post",
+      "mcp__x__like_comment_by_id",
+      "mcp__x__unlike_comment_by_id",
+      "mcp__x__retweet_post",
+      "mcp__x__unretweet_post",
+      "mcp__x__bookmark_post",
+      "mcp__x__unbookmark_post"
+    ]
+  }
+}
