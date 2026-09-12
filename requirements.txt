@@ -5,4 +5,3 @@ neo4j>=5.20
 streamlit>=1.38
 pyvis>=0.3.2
 python-dotenv>=1.0
-streamlit-autorefresh>=1.0

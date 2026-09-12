@@ -1,0 +1,51 @@
+<!doctype html>
+<meta charset="utf-8" />
+<style>html,body{margin:0;padding:0;height:100%} #g{width:100%;height:100%;border:0;display:block}</style>
+<!--
+  Streamlit's components.html iframe is sandboxed without allow-top-navigation, so a
+  graph drawn inside it has no way to tell Python what was clicked. This page is a
+  declared component, which does: it hosts the pyvis HTML in a nested same-origin
+  iframe, takes the edge key that HTML posts up, and hands it to Streamlit over the
+  component protocol.
+-->
+<iframe id="g" sandbox="allow-scripts allow-same-origin"></iframe>
+<script>
+  const post = (msg) => parent.postMessage(Object.assign({isStreamlitMessage: true}, msg), "*");
+
+  window.addEventListener("message", (event) => {
+    const data = event.data || {};
+
+    if (data.type === "streamlit:render") {
+      const frame = document.getElementById("g");
+      const args = data.args || {};
+      // Only rewrite on a real change: reassigning srcdoc restarts the physics
+      // simulation, and the page re-renders every few seconds.
+      if (frame.dataset.stamp !== String(args.stamp)) {
+        frame.dataset.stamp = String(args.stamp);
+        frame.srcdoc = args.graph_html || "";
+      }
+      // A rerun replaces this whole iframe, so a fresh element with a play token it
+      // has not run yet must still animate — and its inner page may not be listening
+      // for a moment, hence the retries. The inner page ignores a repeat.
+      const play = String(args.play || 0);
+      if (play !== "0" && frame.dataset.play !== play) {
+        frame.dataset.play = play;
+        let tries = 0;
+        const tell = () => {
+          if (frame.contentWindow) frame.contentWindow.postMessage({replay: true}, "*");
+          if (++tries < 6) setTimeout(tell, 500);
+        };
+        setTimeout(tell, 400);
+      }
+      document.body.style.height = (args.height || 600) + "px";
+      post({type: "streamlit:setFrameHeight", height: args.height || 600});
+      return;
+    }
+
+    if (data.pick) {
+      post({type: "streamlit:setComponentValue", value: data.pick, dataType: "json"});
+    }
+  });
+
+  post({type: "streamlit:componentReady", apiVersion: 1});
+</script>

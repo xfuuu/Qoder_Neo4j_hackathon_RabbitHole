@@ -23,7 +23,7 @@ main agent (/bridge)            orchestrates rounds, reads graph status
 
 ## The dashboard
 
-`make dashboard` opens the live view (Streamlit + pyvis, 2s auto-refresh): side A's frontier in
+`make dashboard` opens the live view (Streamlit + pyvis, 5s auto-refresh): side A's frontier in
 blue, side B's in red, the nodes both sides reached in gold, the two seeds with a dark border,
 and the latest cross-agent connection spelled out hop by hop. Run it in one terminal and
 `/bridge` in another to watch the two frontiers grow toward each other.
