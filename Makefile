@@ -9,12 +9,12 @@ setup: .venv render
 render:
 	@./scripts/render.sh
 
-# The live view of the graph: two agents' frontiers in blue and red, the nodes both
-# reached in gold, refreshing every 2s while a run digs.
+# The live view: blue is what agent 1 wrote, red agent 2, gold the chain between the
+# two names. The graph refreshes every 5s on its own while a run digs.
 dashboard:
 	./.venv/bin/streamlit run app.py
 
-# Prove both servers actually speak MCP and list the tools they expose.
+# Prove every MCP server starts, speaks MCP, and exposes the tools it should.
 check:
 	@PYTHONPATH=servers ./.venv/bin/python scripts/check.py
 
