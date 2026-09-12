@@ -245,7 +245,7 @@ graph_click = components.declare_component("graph_click", path=COMPONENT_DIR)
 
 def load_config():
     """Read Neo4j credentials from the environment (.env supported)."""
-    load_dotenv()
+    load_dotenv(override=True)  # re-read on every rerun; process env may be stale
     return {
         "NEO4J_URI": os.getenv("NEO4J_URI"),
         # Aura's own credentials file spells it NEO4J_USERNAME; accept either.
