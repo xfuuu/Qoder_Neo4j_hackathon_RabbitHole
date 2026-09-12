@@ -9,6 +9,7 @@ side 'a' = Agent 1's frontier, side 'b' = Agent 2's frontier.
 import html
 import os
 
+import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 from dotenv import load_dotenv
@@ -34,6 +35,20 @@ SHORTEST_PATH_QUERY = (
     "RETURN p LIMIT 1"
 )
 REFRESH_INTERVAL_MS = 2000
+
+# vis-network renders string titles as plain text, so tooltips use \n and this
+# injected stylesheet breaks the lines (and styles the popup).
+TOOLTIP_CSS = """<style>
+.vis-tooltip {
+  white-space: pre-line;
+  font-family: -apple-system, 'Helvetica Neue', sans-serif;
+  font-size: 12px; line-height: 1.5;
+  padding: 8px 10px; border-radius: 8px;
+  background: #0F172A !important; color: #F8FAFC !important;
+  border: none !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+}
+</style>"""
 
 
 def load_config():
@@ -114,11 +129,10 @@ def display_name(data):
 
 
 def make_tooltip(data):
-    rows = "".join(
-        f"<b>{html.escape(str(k))}:</b> {html.escape(str(v))}<br>"
-        for k, v in data["props"].items()
-    )
-    return f"<b>{html.escape(', '.join(data['labels']))}</b><br>{rows}"
+    """Plain-text tooltip; line breaks come from TOOLTIP_CSS."""
+    lines = [", ".join(data["labels"]) or "Entity"]
+    lines += (f"{k}: {v}" for k, v in data["props"].items() if v is not None)
+    return "\n".join(lines)
 
 
 def build_graph_html(nodes, edges, bridge_ids):
@@ -145,37 +159,39 @@ def build_graph_html(nodes, edges, bridge_ids):
             borderWidth=4 if is_seed else 2,
         )
     for edge in edges:
-        title = html.escape(edge["type"])
+        title = edge["type"]
         if edge.get("source_url"):
-            title += f"<br>source: {html.escape(str(edge['source_url']))}"
-        net.add_edge(
-            edge["source"], edge["target"], title=title, label=edge["type"]
-        )
+            title += f"\nsource: {edge['source_url']}"
+        net.add_edge(edge["source"], edge["target"], title=title)
     net.set_options(
         """
         {
-          "nodes": {"font": {"size": 14, "strokeWidth": 3, "strokeColor": "#FFFFFF"}},
+          "nodes": {"font": {"size": 13, "strokeWidth": 3, "strokeColor": "#FFFFFF"}},
           "edges": {
             "smooth": {"type": "continuous"},
-            "arrows": {"to": {"enabled": true, "scaleFactor": 0.5}},
-            "font": {"size": 9, "align": "middle", "strokeWidth": 0},
-            "color": {"color": "#CBD5E1", "highlight": "#F59E0B"}
+            "arrows": {"to": {"enabled": true, "scaleFactor": 0.4}},
+            "color": {"color": "#CBD5E1", "highlight": "#F59E0B", "hover": "#94A3B8"},
+            "width": 1.5
           },
-          "interaction": {"hover": true, "dragNodes": true, "dragView": true, "zoomView": true},
+          "interaction": {
+            "hover": true, "dragNodes": true, "dragView": true, "zoomView": true,
+            "hideEdgesOnDrag": true
+          },
           "physics": {
             "enabled": true,
             "barnesHut": {
-              "gravitationalConstant": -8000,
-              "springLength": 150,
-              "springConstant": 0.04,
-              "damping": 0.09
+              "gravitationalConstant": -12000,
+              "springLength": 200,
+              "springConstant": 0.03,
+              "damping": 0.12,
+              "avoidOverlap": 0.4
             },
-            "stabilization": {"iterations": 200}
+            "stabilization": {"iterations": 250}
           }
         }
         """
     )
-    return net.generate_html()
+    return net.generate_html().replace("</head>", TOOLTIP_CSS + "</head>")
 
 
 def render_header():
@@ -276,6 +292,82 @@ def render_shortest_path(driver):
         f'{"".join(segments)}</div>',
         unsafe_allow_html=True,
     )
+    with st.expander("Hop provenance · 每一跳的来源"):
+        for i, rel in enumerate(path_rels):
+            rel_props = dict(rel)
+            rtype = str(rel_props.get("type") or rel.type)
+            src = rel_props.get("source_url")
+            left = display_name(
+                {"labels": list(path_nodes[i].labels), "props": dict(path_nodes[i])}
+            )
+            right = display_name(
+                {
+                    "labels": list(path_nodes[i + 1].labels),
+                    "props": dict(path_nodes[i + 1]),
+                }
+            )
+            line = f"{i + 1}. **{left}** —`{rtype}`→ **{right}**"
+            line += f" · [source]({src})" if src else " · no source recorded"
+            st.markdown(line)
+
+
+def render_inspector(nodes, edges):
+    """Per-entity provenance panel: pick a node, see every link and its source."""
+    st.subheader("🔍 Entity Inspector · 链路追溯")
+    ordered = sorted(nodes.keys(), key=lambda n: display_name(nodes[n]).lower())
+    choice = st.selectbox(
+        "Select an entity to see how it connects to the graph",
+        options=ordered,
+        index=None,
+        format_func=lambda n: display_name(nodes[n]),
+        placeholder="Type to search an entity…",
+    )
+    if choice is None:
+        st.caption(
+            "Pick an entity above — every relationship it has, plus the source "
+            "page each one came from, will appear here."
+        )
+        return
+
+    props = nodes[choice]["props"]
+    sides = side_set(props)
+    badges = []
+    if {SIDE_A, SIDE_B} <= sides:
+        badges.append(("Shared Bridge", COLOR_BRIDGE))
+    elif SIDE_A in sides:
+        badges.append(("Agent 1 frontier", COLOR_AGENT_1))
+    elif SIDE_B in sides:
+        badges.append(("Agent 2 frontier", COLOR_AGENT_2))
+    if props.get("seed") in (SIDE_A, SIDE_B):
+        badges.append((f"Seed '{props['seed']}'", COLOR_SEED_BORDER))
+    meta = f"depth {props.get('depth', '?')} · expanded: {props.get('expanded', '?')}"
+    badge_html = "".join(
+        f'<span style="background:{c};color:#fff;padding:3px 10px;border-radius:999px;'
+        f'font-size:12px;font-weight:600;margin-right:8px;">{html.escape(t)}</span>'
+        for t, c in badges
+    )
+    st.markdown(
+        f'<div style="margin:6px 0 10px 0;">{badge_html}'
+        f'<span style="color:#6B7280;font-size:12px;">{html.escape(meta)}</span></div>',
+        unsafe_allow_html=True,
+    )
+
+    rows = []
+    for edge in edges:
+        if edge["source"] == choice:
+            rows.append(("outgoing →", edge["type"], display_name(nodes[edge["target"]]), edge["source_url"]))
+        elif edge["target"] == choice:
+            rows.append(("← incoming", edge["type"], display_name(nodes[edge["source"]]), edge["source_url"]))
+    if not rows:
+        st.caption("No connections in the current graph window.")
+        return
+    df = pd.DataFrame(rows, columns=["Direction", "Relation", "Entity", "Source"])
+    st.dataframe(
+        df,
+        hide_index=True,
+        use_container_width=True,
+        column_config={"Source": st.column_config.LinkColumn("Source")},
+    )
 
 
 def main():
@@ -320,13 +412,14 @@ def main():
             "The memory graph is empty. Once agents start writing to Neo4j, "
             "nodes will stream in here live."
         )
-    else:
-        render_legend()
-        components.html(
-            build_graph_html(nodes, edges, bridge_ids), height=600, scrolling=False
-        )
+        return
 
+    render_legend()
+    components.html(
+        build_graph_html(nodes, edges, bridge_ids), height=600, scrolling=False
+    )
     render_shortest_path(driver)
+    render_inspector(nodes, edges)
 
 
 if __name__ == "__main__":
