@@ -53,7 +53,7 @@ TOOLTIP_CSS = """<style>
 
 def load_config():
     """Read Neo4j credentials from the environment (.env supported)."""
-    load_dotenv()
+    load_dotenv(override=True)  # re-read on every rerun; process env may be stale
     return {
         "NEO4J_URI": os.getenv("NEO4J_URI"),
         "NEO4J_USER": os.getenv("NEO4J_USER"),
